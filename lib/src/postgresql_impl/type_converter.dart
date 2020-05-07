@@ -19,7 +19,7 @@ class RawTypeConverter extends DefaultTypeConverter {
 }
 
 /// Encodes the given string ([s]) into the format: ` E'xxx'`
-/// 
+///
 /// > Note: the null character (`\u0000`) will be removed, since
 /// > PostgreSql won't accept it.
 String encodeString(String? s) {
@@ -149,6 +149,10 @@ class DefaultTypeConverter implements TypeConverter {
   String encodeDateTime(DateTime? datetime, {bool isDateOnly = false}) {
       if (datetime == null)
       return 'null';
+    else if(datetime == pgMinDateTime)
+      return '-infinity';
+    else if(datetime == pgMaxDateTime)
+      return 'infinity';
 
     var string = datetime.toIso8601String();
 
@@ -271,7 +275,7 @@ class DefaultTypeConverter implements TypeConverter {
   };
 
   /// Decodes [value] into a [DateTime] instance.
-  /// 
+  ///
   /// Note: it will convert it to local time (via [DateTime.toLocal])
   DateTime decodeDateTime(String value, int pgType, {String? connectionName}) {
     // Built in Dart dates can either be local time or utc. Which means that the
@@ -280,11 +284,10 @@ class DefaultTypeConverter implements TypeConverter {
     // This restriction could be relaxed by using a more advanced date library
     // capable of creating DateTimes for a non-local time zone.
 
-    if (value == 'infinity' || value == '-infinity')
-      throw _error('A timestamp value "$value", cannot be represented '
-          'as a Dart object.', connectionName);
-          //if infinity values are required, rewrite the sql query to cast
-          //the value to a string, i.e. your_column::text.
+    if (value == '-infinity')
+      return pgMinDateTime;
+    else if(value == 'infinity')
+      return pgMaxDateTime;
 
     var formattedValue = value;
 
