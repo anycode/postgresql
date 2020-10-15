@@ -149,9 +149,9 @@ class DefaultTypeConverter implements TypeConverter {
   String encodeDateTime(DateTime? datetime, {bool isDateOnly = false}) {
       if (datetime == null)
       return 'null';
-    else if(datetime == pgMinDateTime)
+    else if(datetime == dartMinDateTime)
       return '-infinity';
-    else if(datetime == pgMaxDateTime)
+    else if(datetime == dartMaxDateTime)
       return 'infinity';
 
     var string = datetime.toIso8601String();
@@ -285,9 +285,9 @@ class DefaultTypeConverter implements TypeConverter {
     // capable of creating DateTimes for a non-local time zone.
 
     if (value == '-infinity')
-      return pgMinDateTime;
+      return dartMinDateTime;
     else if(value == 'infinity')
-      return pgMaxDateTime;
+      return dartMaxDateTime;
 
     var formattedValue = value;
 
