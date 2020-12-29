@@ -286,11 +286,10 @@ class DefaultTypeConverter implements TypeConverter {
     // This restriction could be relaxed by using a more advanced date library
     // capable of creating DateTimes for a non-local time zone.
 
-    if (value == 'infinity' || value == '-infinity')
-      throw _error('A timestamp value "$value", cannot be represented '
-          'as a Dart object.', getConnectionName);
-          //if infinity values are required, rewrite the sql query to cast
-          //the value to a string, i.e. your_column::text.
+    if (value == '-infinity')
+      return dartMinDateTime;
+    else if(value == 'infinity')
+      return dartMaxDateTime;
 
     var formattedValue = value;
 
