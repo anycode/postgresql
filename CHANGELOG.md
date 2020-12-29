@@ -1,3 +1,17 @@
+### Version 0.7.0
+
+* **Breaking**: the substition with a Map instance won't treat number identifiers specially. For example, if `@0` is specified, it will consider the identifier as `'0'` and retrieve `values['0']`.
+
+### Version 0.6.0
+
+* Array type with single dimension supported.
+* `isUtcTimeZone` removed from `DefaultTypeConverter.decodeDateTime()` and related functions.
+* `DefaultTypeConverter.decodeDateTime()` converts the DateTime instance to local time by calling `DateTime.toLocal()`.
+
+### Version 0.5.8
+
+* `encodeString()` ignores the `trimNull` argument. Now it always removes the null characters.
+
 ### Version 0.5.7
 
 * `Pool.busyConnectionCount` counts only `inUse`.
