@@ -29,8 +29,8 @@ class MockServerBackendImpl implements Backend {
 
   final Mocket mocket = new Mocket();
 
-  final List<Packet> log = new List<Packet>();
-  final List<Uint8List> received = new List<Uint8List>();
+  final List<Packet> log = <Packet>[];
+  final List<Uint8List> received = <Uint8List>[];
 
   bool _isClosed = true;
   bool _isDestroyed = true;
@@ -74,9 +74,8 @@ class MockServerBackendImpl implements Backend {
 class MockServerImpl implements MockServer {
   MockServerImpl();
 
-  Future<pg.Connection> connect() =>
-      ConnectionImpl.connect('postgres://testdb:password@localhost:5433/testdb',
-          mockSocketConnect: (host, port) => new Future(() => _startBackend()));
+  Future<pg.Connection> connect() => ConnectionImpl.connect('postgres://testdb:password@localhost:5433/testdb',
+      mockSocketConnect: (host, port) => new Future(() => _startBackend()));
 
   stop() {}
 
@@ -130,7 +129,9 @@ class Mocket extends StreamView<Uint8List> implements Socket {
     onDestroy();
   }
 
-  Uint8List getRawOption(RawSocketOption option) {return null;}
+  Uint8List getRawOption(RawSocketOption option) {
+    return null;
+  }
 
   void setRawOption(RawSocketOption option) {}
 
@@ -152,12 +153,10 @@ class Mocket extends StreamView<Uint8List> implements Socket {
   int get port => throw new UnimplementedError();
   InternetAddress get remoteAddress => throw new UnimplementedError();
   int get remotePort => throw new UnimplementedError();
-  bool setOption(SocketOption option, bool enabled) =>
-      throw new UnimplementedError();
+  bool setOption(SocketOption option, bool enabled) => throw new UnimplementedError();
   void write(Object obj) => throw new UnimplementedError();
 
-  void writeAll(Iterable objects, [String separator = ""]) =>
-      throw new UnimplementedError();
+  void writeAll(Iterable objects, [String separator = ""]) => throw new UnimplementedError();
   void writeCharCode(int charCode) => throw new UnimplementedError();
   void writeln([Object obj = ""]) => throw new UnimplementedError();
 }

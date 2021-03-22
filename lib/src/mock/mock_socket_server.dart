@@ -1,10 +1,7 @@
 part of postgresql.mock;
 
-
 class MockSocketServerBackendImpl implements Backend {
-  
   MockSocketServerBackendImpl(this.socket) {
-    
     socket.listen((data) {
       received.add(data);
       log.add(new Packet(toServer, data));
@@ -13,30 +10,28 @@ class MockSocketServerBackendImpl implements Backend {
         _waitForClient = null;
       }
     })
-    
-    ..onDone(() {
-      _isClosed = true;
-      log.add(new Packet(clientClosed, []));
-    })
-    
-    //TODO
-    ..onError((err, [st]) {
-      _log(err);
-      _log(st);
-    });
+      ..onDone(() {
+        _isClosed = true;
+        log.add(new Packet(clientClosed, []));
+      })
+
+      //TODO
+      ..onError((err, [st]) {
+        _log(err);
+        _log(st);
+      });
   }
 
-  
   final Socket socket;
-    
-  final List<Packet> log = new List<Packet>();
-  final List<List<int>> received = new List<List<int>>();
-  
+
+  final List<Packet> log = <Packet>[];
+  final List<List<int>> received = <List<int>>[];
+
   bool _isClosed = true;
   bool _isDestroyed = true;
   bool get isClosed => _isClosed;
   bool get isDestroyed => _isDestroyed;
-    
+
   /// Clear out received data.
   void clear() {
     received.clear();
@@ -49,14 +44,12 @@ class MockSocketServerBackendImpl implements Backend {
     _isDestroyed = true;
     socket.close();
   }
-  
-  
+
   Completer _waitForClient;
-  
+
   /// Wait for the next packet to arrive from the client.
   Future waitForClient() {
-    if (_waitForClient == null)
-      _waitForClient = new Completer();
+    if (_waitForClient == null) _waitForClient = new Completer();
     return _waitForClient.future;
   }
 
@@ -69,45 +62,36 @@ class MockSocketServerBackendImpl implements Backend {
 
   void socketException(String msg) {
     throw new UnsupportedError('Only valid on MockServer, not MockSocketServer');
-  }  
+  }
 }
 
-
 class MockSocketServerImpl implements MockServer {
-
   static Future<MockSocketServerImpl> start([int port]) {
     port = port == null ? 5435 : port;
-    return ServerSocket.bind('127.0.0.1', port)
-        .then((s) => new MockSocketServerImpl._private(s));
+    return ServerSocket.bind('127.0.0.1', port).then((s) => new MockSocketServerImpl._private(s));
   }
-  
+
   MockSocketServerImpl._private(this.server) {
-    server
-      .listen(_handleConnect)
+    server.listen(_handleConnect)
       ..onError((e) => _log(e))
       ..onDone(() => _log('MockSocketServer client disconnected.'));
   }
-  
-  Future<pg.Connection> connect(
-      {String uri, 
-       Duration connectionTimeout,
-       pg.TypeConverter typeConverter}) => pg.connect(
-          uri == null ? 'postgres://testdb:password@localhost:${server.port}/testdb' : uri,
-          connectionTimeout: connectionTimeout,
-          typeConverter: typeConverter);
-  
-  
+
+  Future<pg.Connection> connect({String uri, Duration connectionTimeout, pg.TypeConverter typeConverter}) =>
+      pg.connect(uri == null ? 'postgres://testdb:password@localhost:${server.port}/testdb' : uri,
+          connectionTimeout: connectionTimeout, typeConverter: typeConverter);
+
   final ServerSocket server;
   final List<Backend> backends = <Backend>[];
-  
+
   stop() {
     server.close();
   }
-  
+
   _handleConnect(Socket socket) {
     var backend = new MockSocketServerBackendImpl(socket);
     backends.add(backend);
-    
+
     if (_waitForConnect != null) {
       _waitForConnect.complete(backend);
       _waitForConnect = null;
@@ -115,13 +99,10 @@ class MockSocketServerImpl implements MockServer {
   }
 
   Completer<Backend> _waitForConnect;
-  
+
   /// Wait for the next client to connect.
   Future<Backend> waitForConnect() {
-    if (_waitForConnect == null)
-      _waitForConnect = new Completer<Backend>();
+    if (_waitForConnect == null) _waitForConnect = new Completer<Backend>();
     return _waitForConnect.future;
   }
-
 }
-
