@@ -2,8 +2,9 @@ library postgresql.pool.impl;
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
+//import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:postgresql2/constants.dart';
 import 'package:postgresql2/postgresql.dart' as pg;
 import 'package:postgresql2/src/postgresql_impl/postgresql_impl.dart' as pgi;
@@ -152,6 +153,7 @@ class PooledConnectionImpl implements PooledConnection, pgi.ConnectionOwner {
     _pool._destroyConnection(this);
   }
 
+  @override
   String toString() => '$name:$_state:$connectionState';
 }
 
@@ -295,7 +297,7 @@ class PoolImpl implements Pool {
 
   //A safe version that catches the exception.
   Future _establishConnectionSafely() async {
-    for (DateTime since;;) //#21: try a while since PG likely recovering
+    for (DateTime? since;;) //#21: try a while since PG likely recovering
       try {
         return _establishConnection();
       } catch (ex) {

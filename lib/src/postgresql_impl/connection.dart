@@ -41,7 +41,7 @@ class ConnectionImpl implements Connection {
   final String? _timeZone;
   final TypeConverter _typeConverter;
   /// The owner of the connection, or null if not available.
-  ConnectionOwner owner;
+  ConnectionOwner? owner;
   final Socket _socket;
   final Buffer _buffer;
   bool _hasConnected = false;
@@ -450,7 +450,8 @@ class ConnectionImpl implements Connection {
         }
 
         if (msg.code?.startsWith('57P') ?? false) { //PG stop/restart
-          if (owner != null) owner.destroy();
+          final ow = owner;
+          if (ow != null) ow.destroy();
           else {
             _state = closed;
             _socket.destroy(); 
