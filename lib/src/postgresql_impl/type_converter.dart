@@ -87,12 +87,12 @@ class DefaultTypeConverter implements TypeConverter {
         return encodeJson(value);
   
       case 'array':
-        if (value is List)
+        if (value is Iterable)
           return encodeArray(value);
         break;
 
       case 'bytea':
-        if (value is List<int>)
+        if (value is Iterable<int>)
           return encodeBytea(value);
         break;
 
@@ -123,7 +123,7 @@ class DefaultTypeConverter implements TypeConverter {
       return encodeDateTime(value, isDateOnly: false);
     if (value is bool || value is BigInt)
       return value.toString();
-    if (value is List)
+    if (value is Iterable)
       return encodeArray(value);
     return encodeJson(value);
   }
@@ -135,7 +135,7 @@ class DefaultTypeConverter implements TypeConverter {
     return n.toString();
   }
   
-  String encodeArray(List value, {String? pgType}) {
+  String encodeArray(Iterable value, {String? pgType}) {
     final buf = new StringBuffer('array[');
     for (final v in value) {
       if (buf.length > 6) buf.write(',');
@@ -192,7 +192,7 @@ class DefaultTypeConverter implements TypeConverter {
   String encodeJson(value) => encodeString(jsonEncode(value));
 
   // See http://www.postgresql.org/docs/9.0/static/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS-ESCAPE
-  String encodeBytea(List<int> value) {
+  String encodeBytea(Iterable<int> value) {
     //var b64String = ...;
     //return " decode('$b64String', 'base64') ";
   
