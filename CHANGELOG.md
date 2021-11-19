@@ -1,3 +1,35 @@
+### Version 1.0.1
+
+* Fix #20: remove connections from the pool when detecting server restarted/crashed
+* Fix #21: retry if failed to establish a connection
+
+### Version 1.0.0
+
+* Migrate to null safety
+* Numeric and Decimal types are consider as `double`, instead of `BigInt`.
+    * It means the precision is bounded by `double`.
+* The `getConnectionName()` and `getDebugName()` arguments are simplifed as `String? connectionName` and `String? debugName`.
+* `Settings.fromMap` and `Settings.toMap` are removed.
+* The `mockSocketConnect` argument is removed.
+
+### Version 0.7.7
+
+* Rename `freeConnections` to `limitConnections`
+* Add `limitTimeout` to control how long to wait when exceeding `limitConnections`
+
+### Version 0.7.6
+
+* If `freeConnections` is set, we'll wait up to 700ms, if number of connections exceeds [freeConnections].
+It helps to reduce number of connections if there are a lot of short-lived connections.
+
+### Version 0.7.4
+
+* `Settings.onMaxConnection` introduced to monitor the usage of DB connections.
+
+### Version 0.7.3
+
+* `freeConnections` introduced to control maximal number of connections kept in a pool.
+
 ### Version 0.7.0
 
 * **Breaking**: the substition with a Map instance won't treat number identifiers specially. For example, if `@0` is specified, it will consider the identifier as `'0'` and retrieve `values['0']`.

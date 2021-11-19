@@ -30,16 +30,17 @@ const PoolState stopping = PoolState.stopping;
 const PoolState stopped = PoolState.stopped;
 
 /// Errors used in [PostgresqlException.exception] when [Pool.connect] failed.
-const
-    peConnectionTimeout = 4001,
+const peConnectionTimeout = 4001,
     pePoolStopped = 4002,
     peConnectionClosed = 4003,
-    peConnectionFailed = 40004; //miscellaneous connection errors (excluding SQL statement errors)
+    peConnectionFailed =
+        40004; //miscellaneous connection errors (excluding SQL statement errors)
 
 // DateTimes can represent time values that are at a distance of at most 100,000,000
 // days from epoch (1970-01-01 UTC): -271821-04-20 to 275760-09-13.
 // https://api.dart.dev/stable/2.10.2/dart-core/DateTime-class.html
 /// Dart representation of PostgreSQL '-infinity'
-DateTime dartMinDateTime = DateTime.utc(-271821,04,20);
+DateTime dartMinDateTime = DateTime.utc(-271821, 04, 20);
+
 /// Dart representation of PostgreSQL 'infinity'
-DateTime dartMaxDateTime = DateTime.utc(275760,09,13);
+DateTime dartMaxDateTime = DateTime.utc(275760, 09, 13);

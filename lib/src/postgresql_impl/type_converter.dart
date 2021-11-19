@@ -2,98 +2,108 @@ part of postgresql.impl;
 
 /// Map of characters to escape.
 const escapes = const {
-  "'": r"\'", "\r": r"\r", "\n": r"\n", r"\": r"\\",
-  "\t": r"\t", "\b": r"\b", "\f": r"\f", "\u0000": "",
+  "'": r"\'",
+  "\r": r"\r",
+  "\n": r"\n",
+  r"\": r"\\",
+  "\t": r"\t",
+  "\b": r"\b",
+  "\f": r"\f",
+  "\u0000": "",
 };
+
 /// Characters that will be escapes.
 const escapePattern = r"'\r\n\\\t\b\f\u0000"; //detect unsupported null
 final _escapeRegExp = new RegExp("[$escapePattern]");
 
 class RawTypeConverter extends DefaultTypeConverter {
-  String encode(value, String type, {getConnectionName()})
-  => encodeValue(value, type);
-   
-  decode(String value, int pgType, {getConnectionName()}) => value;
+  @override
+  String encode(value, String? type, {String? connectionName}) =>
+      encodeValue(value, type);
+
+  @override
+  decode(String value, int pgType, {String? connectionName}) => value;
 }
 
 /// Encodes the given string ([s]) into the format: ` E'xxx'`
-/// 
+///
 /// > Note: the null character (`\u0000`) will be removed, since
 /// > PostgreSql won't accept it.
-String encodeString(String s) {
+String encodeString(String? s) {
   if (s == null) return ' null ';
 
   var escaped = s.replaceAllMapped(_escapeRegExp, _escape);
   return " E'$escaped' ";
 }
-String _escape(Match m) => escapes[m[0]];
+
+String _escape(Match m) => escapes[m[0]]!;
 
 class DefaultTypeConverter implements TypeConverter {
-    
-  String encode(value, String type, {getConnectionName()}) 
-    => encodeValue(value, type, getConnectionName: getConnectionName);
-   
-  decode(String value, int pgType, {getConnectionName()})
-  => decodeValue(value, pgType, getConnectionName: getConnectionName);
+  @override
+  String encode(value, String? type, {String? connectionName}) =>
+      encodeValue(value, type, connectionName: connectionName);
 
-  PostgresqlException _error(String msg, getConnectionName()) {
-    var name = getConnectionName == null ? null : getConnectionName();
-    return new PostgresqlException(msg, name);
+  @override
+  decode(String value, int pgType, {String? connectionName}) =>
+      decodeValue(value, pgType, connectionName: connectionName);
+
+  PostgresqlException _error(String msg, String? connectionName) {
+    return new PostgresqlException(msg, connectionName);
   }
-  
-  String encodeValue(value, String type, {getConnectionName()}) {
+
+  String encodeValue(value, String? type, {String? connectionName}) {
     if (type == null)
-      return encodeValueDefault(value, getConnectionName: getConnectionName);
-    if (value == null)
-      return 'null';
+      return encodeValueDefault(value, connectionName: connectionName);
+    if (value == null) return 'null';
 
     switch (type) {
-      case 'text': case 'string':
-        if (value is String)
-          return encodeString(value);
+      case 'text':
+      case 'string':
+        return encodeString(value.toString());
+
+      case 'integer':
+      case 'smallint':
+      case 'bigint':
+      case 'serial':
+      case 'bigserial':
+      case 'int':
+        if (value is int || value is BigInt) return encodeNumber(value);
         break;
 
-      case 'integer': case 'smallint':
-      case 'bigint': case 'serial':
-      case 'bigserial': case 'int':
-        if (value is int || value is BigInt)
-          return encodeNumber(value);
+      case 'real':
+      case 'double':
+      case 'num':
+      case 'number':
+      case 'numeric':
+      case 'decimal': //Work only for smaller precision
+        if (value is num || value is BigInt) return encodeNumber(value);
         break;
 
-      case 'real': case 'double':
-      case 'num': case 'number':
-        if (value is num)
-          return encodeNumber(value);
+      case 'boolean':
+      case 'bool':
+        if (value is bool) return value.toString();
         break;
 
-    // TODO numeric, decimal
-
-      case 'boolean': case 'bool':
-        if (value is bool)
-          return value.toString();
-        break;
-
-      case 'timestamp': case 'timestamptz': case 'datetime':
-        if (value is DateTime)
-          return encodeDateTime(value, isDateOnly: false);
+      case 'timestamp':
+      case 'timestamptz':
+      case 'datetime':
+        if (value is DateTime) return encodeDateTime(value, isDateOnly: false);
         break;
 
       case 'date':
-        if (value is DateTime)
-          return encodeDateTime(value, isDateOnly: true);
+        if (value is DateTime) return encodeDateTime(value, isDateOnly: true);
         break;
-  
-      case 'json': case 'jsonb':
+
+      case 'json':
+      case 'jsonb':
         return encodeJson(value);
-  
+
       case 'array':
-        if (value is List)
-          return encodeArray(value);
+        if (value is Iterable) return encodeArray(value);
         break;
 
       case 'bytea':
-        if (value is List<int>)
-          return encodeBytea(value);
+        if (value is Iterable<int>) return encodeBytea(value);
         break;
 
       default:
@@ -102,47 +112,43 @@ class DefaultTypeConverter implements TypeConverter {
 
         final t = type.toLowerCase(); //backward compatible
         if (t != type)
-          return encodeValue(value, t, getConnectionName: getConnectionName);
+          return encodeValue(value, t, connectionName: connectionName);
 
-        throw _error('Unknown type name: $type.', getConnectionName);
+        throw _error('Unknown type name: $type.', connectionName);
     }
 
-    throw _error('Invalid runtime type and type modifier: '
-        '${value.runtimeType} to $type.', getConnectionName);
+    throw _error(
+        'Invalid runtime type and type modifier: '
+        '${value.runtimeType} to $type.',
+        connectionName);
   }
-  
+
   // Unspecified type name. Use default type mapping.
-  String encodeValueDefault(value, {getConnectionName()}) {
-    if (value == null)
-      return 'null';
-    if (value is num)
-      return encodeNumber(value);
-    if (value is String)
-      return encodeString(value);
-    if (value is DateTime)
-      return encodeDateTime(value, isDateOnly: false);
-    if (value is bool || value is BigInt)
-      return value.toString();
-    if (value is List)
-      return encodeArray(value);
+  String encodeValueDefault(value, {String? connectionName}) {
+    if (value == null) return 'null';
+    if (value is num) return encodeNumber(value);
+    if (value is String) return encodeString(value);
+    if (value is DateTime) return encodeDateTime(value, isDateOnly: false);
+    if (value is bool || value is BigInt) return value.toString();
+    if (value is Iterable) return encodeArray(value);
     return encodeJson(value);
   }
-  
+
   String encodeNumber(num n) {
     if (n.isNaN) return "'nan'";
     if (n == double.infinity) return "'infinity'";
     if (n == double.negativeInfinity) return "'-infinity'";
     return n.toString();
   }
-  
-  String encodeArray(List values, {String pgType}) {
-    if(pgType == null) {
+
+  String encodeArray(Iterable values, {String? pgType}) {
+    if (pgType == null) {
       // no pgType is specified, return simple comma separated list
       // of values and let developer wrap the value in proper format
       // e.g.
       // 'where id = any(array[@val]::int[])' will produce 'where id = any(array[v1,v2,...]::int[])' which is OK
       // 'where id in (@arr)' will produce 'where id in (v1,v2,...)' which is OK
-      return values?.map((value) => encodeValueDefault(value))?.join(', ');
+      return values.map((value) => encodeValueDefault(value)).join(', ');
     } else {
       // pgType is specified, return pg array of the given type.
       // This can be only used as array. It cannot be used as a pg list.
@@ -158,16 +164,14 @@ class DefaultTypeConverter implements TypeConverter {
     }
   }
 
-  String encodeDateTime(DateTime datetime, {bool isDateOnly}) {
-      if (datetime == null)
-      return 'null';
+  String encodeDateTime(DateTime? datetime, {bool isDateOnly: false}) {
+    if (datetime == null) return 'null';
 
     var string = datetime.toIso8601String();
 
     if (isDateOnly) {
       string = string.split("T").first;
     } else {
-
       // ISO8601 UTC times already carry Z, but local times carry no timezone info
       // so this code will append it.
       if (!datetime.isUtc) {
@@ -176,7 +180,8 @@ class DefaultTypeConverter implements TypeConverter {
 
         // Note that the sign is stripped via abs() and appended later.
         var hourComponent = timezoneHourOffset.abs().toString().padLeft(2, "0");
-        var minuteComponent = timezoneMinuteOffset.abs().toString().padLeft(2, "0");
+        var minuteComponent =
+            timezoneMinuteOffset.abs().toString().padLeft(2, "0");
 
         if (timezoneHourOffset >= 0) {
           hourComponent = "+${hourComponent}";
@@ -204,14 +209,15 @@ class DefaultTypeConverter implements TypeConverter {
   String encodeJson(value) => encodeString(jsonEncode(value));
 
   // See http://www.postgresql.org/docs/9.0/static/sql-syntax-lexical.html#SQL-SYNTAX-STRINGS-ESCAPE
-  String encodeBytea(List<int> value) {
+  String encodeBytea(Iterable<int> value) {
     //var b64String = ...;
     //return " decode('$b64String', 'base64') ";
-  
-    throw _error('bytea encoding not implemented. Pull requests welcome ;)', null);
+
+    throw _error(
+        'bytea encoding not implemented. Pull requests welcome ;)', null);
   }
-  
-  decodeValue(String value, int pgType, {getConnectionName()}) {
+
+  decodeValue(String value, int pgType, {String? connectionName}) {
     switch (pgType) {
       case _BOOL:
         return value == 't';
@@ -223,26 +229,20 @@ class DefaultTypeConverter implements TypeConverter {
 
       case _FLOAT4: // real
       case _FLOAT8: // double precision
+      case _NUMERIC: //Work only for smaller precision
         return double.parse(value);
-  
+
       case _TIMESTAMP:
       case _TIMESTAMPZ:
       case _DATE:
-        return decodeDateTime(value, pgType, getConnectionName: getConnectionName);
+        return decodeDateTime(value, pgType, connectionName: connectionName);
 
       case _JSON:
       case _JSONB:
         return jsonDecode(value);
 
-      case _NUMERIC:
-        try {
-          return BigInt.parse(value);
-        } catch (_) {
-        }
-        return value;
-
       //TODO binary bytea
-  
+
       // Not implemented yet - return a string.
       //case _MONEY:
       //case _TIMETZ:
@@ -252,12 +252,13 @@ class DefaultTypeConverter implements TypeConverter {
       default:
         final scalarType = _arrayTypes[pgType];
         if (scalarType != null)
-          return decodeArray(value, scalarType, getConnectionName: getConnectionName);
+          return decodeArray(value, scalarType, connectionName: connectionName);
 
         // Return a string for unknown types. The end user can parse this.
         return value;
     }
   }
+
   static const _arrayTypes = {
     _BIT_ARRAY: _BIT,
     _BOOL_ARRAY: _BOOL,
@@ -289,9 +290,9 @@ class DefaultTypeConverter implements TypeConverter {
   };
 
   /// Decodes [value] into a [DateTime] instance.
-  /// 
+  ///
   /// Note: it will convert it to local time (via [DateTime.toLocal])
-  DateTime decodeDateTime(String value, int pgType, {getConnectionName()}) {
+  DateTime decodeDateTime(String value, int pgType, {String? connectionName}) {
     // Built in Dart dates can either be local time or utc. Which means that the
     // the postgresql timezone parameter for the connection must be either set
     // to UTC, or the local time of the server on which the client is running.
@@ -300,13 +301,13 @@ class DefaultTypeConverter implements TypeConverter {
 
     if (value == '-infinity')
       return dartMinDateTime;
-    else if(value == 'infinity')
-      return dartMaxDateTime;
+    else if (value == 'infinity') return dartMaxDateTime;
 
     var formattedValue = value;
 
     // Postgresql uses a BC suffix rather than a negative prefix as in ISO8601.
-    if (value.endsWith(' BC')) formattedValue = '-' + value.substring(0, value.length - 3);
+    if (value.endsWith(' BC'))
+      formattedValue = '-' + value.substring(0, value.length - 3);
 
     if (pgType == _TIMESTAMP) {
       formattedValue += 'Z';
@@ -320,9 +321,10 @@ class DefaultTypeConverter implements TypeConverter {
   }
 
   /// Decodes an array value, [value]. Each item of it is [pgType].
-  decodeArray(String value, int pgType, {getConnectionName()}) {
+  decodeArray(String value, int pgType, {String? connectionName}) {
     final len = value.length - 2;
-    assert(value.codeUnitAt(0) == $lbrace && value.codeUnitAt(len + 1) == $rbrace);
+    assert(
+        value.codeUnitAt(0) == $lbrace && value.codeUnitAt(len + 1) == $rbrace);
     if (len <= 0) return [];
     value = value.substring(1, len + 1);
 
@@ -339,14 +341,17 @@ class DefaultTypeConverter implements TypeConverter {
               assert(i >= len || value.codeUnitAt(i) == $comma);
               break;
             }
-            if (cc == $backslash) buf.add(value.codeUnitAt(++i));
-            else buf.add(cc);
+            if (cc == $backslash)
+              buf.add(value.codeUnitAt(++i));
+            else
+              buf.add(cc);
           }
-        } else { //not quoted
+        } else {
+          //not quoted
           for (int j = i;; ++j) {
             if (j >= len || value.codeUnitAt(j) == $comma) {
               final v = value.substring(i, j);
-              result.add(v == 'NULL' ? null: v);
+              result.add(v == 'NULL' ? null : v);
               i = j;
               break;
             }
@@ -356,13 +361,13 @@ class DefaultTypeConverter implements TypeConverter {
       return result;
     }
 
-    if (const {_JSON, _JSONB}.contains(pgType))
-      return jsonDecode('[$value]');
+    if (const {_JSON, _JSONB}.contains(pgType)) return jsonDecode('[$value]');
 
     final result = [];
     for (final v in value.split(','))
-      result.add(v == 'NULL' ? null:
-          decodeValue(v, pgType, getConnectionName: getConnectionName));
+      result.add(v == 'NULL'
+          ? null
+          : decodeValue(v, pgType, connectionName: connectionName));
     return result;
   }
 }

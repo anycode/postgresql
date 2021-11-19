@@ -26,7 +26,7 @@ main() {
     }
 
     // Slice up into lots of little lists and add them to the buffer.
-    var b = msg.buffer;
+    Iterable<int> b = msg.buffer;
     int i = 0;
     while (b.isNotEmpty) {
       i += 7;
@@ -62,8 +62,7 @@ void addUtf8String(List<int> buffer, String s) {
 void addInt16(List<int> buffer, int i) {
   assert(i >= -32768 && i <= 32767);
 
-  if (i < 0)
-    i = 0x10000 + i;
+  if (i < 0) i = 0x10000 + i;
 
   int a = (i >> 8) & 0x00FF;
   int b = i & 0x00FF;
@@ -75,8 +74,7 @@ void addInt16(List<int> buffer, int i) {
 void addInt32(List<int> buffer, int i) {
   assert(i >= -2147483648 && i <= 2147483647);
 
-  if (i < 0)
-    i = 0x100000000 + i;
+  if (i < 0) i = 0x100000000 + i;
 
   int a = (i >> 24) & 0x000000FF;
   int b = (i >> 16) & 0x000000FF;
