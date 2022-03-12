@@ -14,6 +14,8 @@ class PoolSettingsImpl implements PoolSettings {
       this.maxConnections: 10,
       this.limitConnections: 0,
       void Function(int count)? this.onMaxConnection,
+      void Function(String sql, dynamic values)? this.onExecute,
+      void Function(String sql, dynamic values)? this.onQuery,
       this.startTimeout: const Duration(seconds: 30),
       this.stopTimeout: const Duration(seconds: 30),
       this.establishTimeout: const Duration(seconds: 30),
@@ -37,6 +39,8 @@ class PoolSettingsImpl implements PoolSettings {
         int? maxConnections,
         int? limitConnections,
         void Function(int count)? onMaxConnection,
+        void Function(String sql, dynamic values)? onExecute,
+        void Function(String sql, dynamic values)? onQuery,
         Duration? startTimeout,
         Duration? stopTimeout,
         Duration? establishTimeout,
@@ -57,6 +61,8 @@ class PoolSettingsImpl implements PoolSettings {
      maxConnections: maxConnections ?? _default.maxConnections,
      limitConnections: limitConnections ?? _default.limitConnections,
      onMaxConnection: onMaxConnection,
+     onExecute: onExecute,
+     onQuery: onQuery,
      startTimeout: startTimeout  ?? _default.startTimeout,
      stopTimeout: stopTimeout  ?? _default.stopTimeout,
      establishTimeout: establishTimeout  ?? _default.establishTimeout,
@@ -86,6 +92,10 @@ class PoolSettingsImpl implements PoolSettings {
   final int limitConnections;
   @override
   final void Function(int count)? onMaxConnection;
+  @override
+  final void Function(String sql, dynamic values)? onExecute;
+  @override
+  final void Function(String sql, dynamic values)? onQuery;
   @override
   final Duration startTimeout;
   @override

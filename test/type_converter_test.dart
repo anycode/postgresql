@@ -1,7 +1,5 @@
 import 'package:test/test.dart';
 import 'package:postgresql2/postgresql.dart';
-import 'package:postgresql2/src/postgresql_impl/postgresql_impl.dart';
-
 
 main() {
 
