@@ -19,22 +19,16 @@ const connecting = PooledConnectionState.connecting,
     connClosed = PooledConnectionState.closed;
 
 typedef Future<pg.Connection> ConnectionFactory(String uri,
-    {Duration? connectionTimeout,
-    String? applicationName,
-    String? timeZone,
-    pg.TypeConverter? typeConverter,
-    String? debugName});
+    {Duration? connectionTimeout, String? applicationName, String? timeZone, pg.TypeConverter? typeConverter, String? debugName});
 
 class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
-  ConnectionDecorator(
-      this._pool, PooledConnectionImpl pconn, pg.Connection conn)
+  ConnectionDecorator(this._pool, PooledConnectionImpl pconn, pg.Connection conn)
       : _pconn = pconn,
         _conn = conn {
     if (conn is pgi.ConnectionImpl) conn.owner = this;
   }
 
-  _error(fnName) => new pg.PostgresqlException(
-      '$fnName() called on closed connection.', _pconn.name);
+  _error(fnName) => new pg.PostgresqlException('$fnName() called on closed connection.', _pconn.name);
 
   bool _isReleased = false;
   final pg.Connection _conn;
@@ -61,30 +55,31 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
   }
 
   @override
-  Stream<pg.Row> query(String sql, [values]) =>
-      _isReleased ? throw _error('query') : _conn.query(sql, values);
+  Stream<pg.Row> query(String sql, [values]) {
+    if (_isReleased) throw _error('query');
+    _pool.settings.onQuery?.call(sql, values);
+    return _conn.query(sql, values);
+  }
 
   @override
-  Future<int> execute(String sql, [values]) =>
-      _isReleased ? throw _error('execute') : _conn.execute(sql, values);
+  Future<int> execute(String sql, [values]) {
+    if (_isReleased) throw _error('execute');
+    _pool.settings.onExecute?.call(sql, values);
+    return _conn.execute(sql, values);
+  }
 
   @override
-  Future<T> runInTransaction<T>(Future<T> operation(),
-          [pg.Isolation isolation = readCommitted]) =>
-      _isReleased
-          ? throw throw _error('runInTransaction')
-          : _conn.runInTransaction(operation, isolation);
+  Future<T> runInTransaction<T>(Future<T> operation(), [pg.Isolation isolation = readCommitted]) =>
+      _isReleased ? throw throw _error('runInTransaction') : _conn.runInTransaction(operation, isolation);
 
   @override
   pg.ConnectionState get state => _isReleased ? closed : _conn.state;
 
   @override
-  pg.TransactionState get transactionState =>
-      _isReleased ? unknown : _conn.transactionState;
+  pg.TransactionState get transactionState => _isReleased ? unknown : _conn.transactionState;
 
   @override
-  Stream<pg.Message> get messages =>
-      _isReleased ? new Stream.fromIterable([]) : _conn.messages;
+  Stream<pg.Message> get messages => _isReleased ? new Stream.fromIterable([]) : _conn.messages;
 
   @override
   Map<String, String> get parameters => _isReleased ? {} : _conn.parameters;
@@ -139,9 +134,7 @@ class PooledConnectionImpl implements PooledConnection, pgi.ConnectionOwner {
   pg.ConnectionState? get connectionState => _connection?.state;
 
   @override
-  String get name =>
-      '${_pool.settings.poolName}:$backendPid' +
-      (_useId == null ? '' : ':$_useId');
+  String get name => '${_pool.settings.poolName}:$backendPid' + (_useId == null ? '' : ':$_useId');
 
   @override
   void destroy() {
@@ -153,8 +146,7 @@ class PooledConnectionImpl implements PooledConnection, pgi.ConnectionOwner {
 }
 
 class PoolImpl implements Pool {
-  PoolImpl(PoolSettings this.settings, this._typeConverter,
-      [this._connectionFactory = pgi.ConnectionImpl.connect]);
+  PoolImpl(PoolSettings this.settings, this._typeConverter, [this._connectionFactory = pgi.ConnectionImpl.connect]);
 
   PoolState _state = initial;
   @override
@@ -176,9 +168,7 @@ class PoolImpl implements Pool {
   List<PooledConnectionImpl>? _connectionsView;
 
   @override
-  List<PooledConnectionImpl> get connections =>
-      _connectionsView ??
-      (_connectionsView = new UnmodifiableListView(_connections));
+  List<PooledConnectionImpl> get connections => _connectionsView ?? (_connectionsView = new UnmodifiableListView(_connections));
 
   @override
   int get pooledConnectionCount => _connections.length;
@@ -203,9 +193,7 @@ class PoolImpl implements Pool {
   Future start() async {
     //TODO consider allowing moving from state stopped to starting.
     //Need to carefully clear out all state.
-    if (_state != initial)
-      throw new pg.PostgresqlException(
-          'Cannot start connection pool while in state: $_state.', null);
+    if (_state != initial) throw new pg.PostgresqlException('Cannot start connection pool while in state: $_state.', null);
 
     var stopwatch = new Stopwatch()..start();
 
@@ -220,18 +208,14 @@ class PoolImpl implements Pool {
     _state = starting;
 
     // Start connections in parallel.
-    var futures = new Iterable.generate(
-        settings.minConnections, (i) => _establishConnection());
+    var futures = new Iterable.generate(settings.minConnections, (i) => _establishConnection());
     //don't call ...Safely so exception will be sent to caller
 
-    await Future.wait(futures)
-        .timeout(settings.startTimeout, onTimeout: onTimeout);
+    await Future.wait(futures).timeout(settings.startTimeout, onTimeout: onTimeout);
 
     // If something bad happened and there are not enough connecitons.
     while (_connections.length < settings.minConnections) {
-      await _establishConnection().timeout(
-          settings.startTimeout - stopwatch.elapsed,
-          onTimeout: onTimeout);
+      await _establishConnection().timeout(settings.startTimeout - stopwatch.elapsed, onTimeout: onTimeout);
     }
 
     _state = running;
@@ -241,8 +225,7 @@ class PoolImpl implements Pool {
         leakMilliseconds = leakDetectionThreshold != null
             ? math.max(1000, leakDetectionThreshold.inMilliseconds ~/ 3)
             : 500 * 60 * 1000; //bigger than possible [idleTimeout]
-    var hbMilliseconds = math.min(leakMilliseconds,
-        math.max(60000, settings.idleTimeout.inMilliseconds ~/ 3));
+    var hbMilliseconds = math.min(leakMilliseconds, math.max(60000, settings.idleTimeout.inMilliseconds ~/ 3));
     if (settings.limitConnections > 0) //more frequent if set
       hbMilliseconds = math.min(60000, hbMilliseconds);
     _heartbeatDuration = new Duration(milliseconds: hbMilliseconds);
@@ -274,8 +257,7 @@ class PoolImpl implements Pool {
       if (conn is pgi.ConnectionImpl) conn.owner = pconn;
 
       // Pass this connection's messages through to the pool messages stream.
-      conn.messages.listen((msg) => _messages.add(msg),
-          onError: (msg) => _messages.addError(msg));
+      conn.messages.listen((msg) => _messages.add(msg), onError: (msg) => _messages.addError(msg));
 
       pconn._connection = conn;
       pconn._established = new DateTime.now();
@@ -295,10 +277,7 @@ class PoolImpl implements Pool {
         final now = DateTime.now();
         if (since == null) {
           since = now;
-          _messages.add(new pg.ClientMessage(
-              severity: 'WARNING',
-              message: "Failed to establish connection",
-              exception: ex));
+          _messages.add(new pg.ClientMessage(severity: 'WARNING', message: "Failed to establish connection", exception: ex));
         } else if (now.difference(since) >= settings.connectionTimeout) {
           return ex; //so caller can handle errors
         }
@@ -311,12 +290,9 @@ class PoolImpl implements Pool {
     if (_state != running) return;
 
     try {
-      if (settings.leakDetectionThreshold != null)
-        _forEachConnection(_checkIfLeaked);
+      if (settings.leakDetectionThreshold != null) _forEachConnection(_checkIfLeaked);
 
-      for (int i = _connections.length;
-          _connections.length > settings.minConnections &&
-              --i >= 0;) //reverse since it might be removed
+      for (int i = _connections.length; _connections.length > settings.minConnections && --i >= 0;) //reverse since it might be removed
         _checkIdleTimeout(_connections[i], i);
 
       // This shouldn't be necessary, but should help fault tolerance.
@@ -330,10 +306,8 @@ class PoolImpl implements Pool {
 
   void _checkIdleTimeout(PooledConnectionImpl pconn, int i) {
     if (pconn._state == available &&
-        (_isExpired(
-                pconn._released ?? pconn._established!, settings.idleTimeout) ||
-            (settings.limitConnections > 0 &&
-                _connections.length > settings.limitConnections))) {
+        (_isExpired(pconn._released ?? pconn._established!, settings.idleTimeout) ||
+            (settings.limitConnections > 0 && _connections.length > settings.limitConnections))) {
       _destroyConnection(pconn, i);
     }
   }
@@ -359,8 +333,7 @@ class PoolImpl implements Pool {
   /// If all connections are in leaked state, then destroy them all, and
   /// restart the minimum required number of connections.
   void _checkIfAllConnectionsLeaked() {
-    if (settings.restartIfAllConnectionsLeaked &&
-        _leakedConnections >= settings.maxConnections) {
+    if (settings.restartIfAllConnectionsLeaked && _leakedConnections >= settings.maxConnections) {
       _messages.add(new pg.ClientMessage(
           severity: 'WARNING',
           message: '${settings.poolName} is full of leaked connections. '
@@ -381,10 +354,7 @@ class PoolImpl implements Pool {
 
   @override
   Future<pg.Connection> connect() async {
-    if (_state != running)
-      throw new pg.PostgresqlException(
-          'Connect called while pool is not running.', null,
-          exception: pePoolStopped);
+    if (_state != running) throw new pg.PostgresqlException('Connect called while pool is not running.', null, exception: pePoolStopped);
 
     StackTrace? stackTrace;
     if (settings.leakDetectionThreshold != null) {
@@ -394,8 +364,7 @@ class PoolImpl implements Pool {
 
     var pconn = await _connect(settings.connectionTimeout);
 
-    assert((settings.testConnections && pconn._state == testing) ||
-        (!settings.testConnections && pconn._state == reserved));
+    assert((settings.testConnections && pconn._state == testing) || (!settings.testConnections && pconn._state == reserved));
     assert(pconn._connection!.state == idle);
     assert(pconn._connection!.transactionState == none);
 
@@ -410,9 +379,7 @@ class PoolImpl implements Pool {
 
   Future<PooledConnectionImpl> _connect(Duration timeout) async {
     if (state == stopping || state == stopped)
-      throw new pg.PostgresqlException(
-          'Connect failed as pool is stopping.', null,
-          exception: pePoolStopped);
+      throw new pg.PostgresqlException('Connect failed as pool is stopping.', null, exception: pePoolStopped);
 
     var stopwatch = new Stopwatch()..start();
 
@@ -428,14 +395,12 @@ class PoolImpl implements Pool {
     // add the current connection request at the end of the
     // wait queue.
     if (pconn == null) {
-      final waiting = new _Waiting(settings.limitConnections > 0 &&
-          settings.limitConnections <= _waitQueue.length + connections.length);
+      final waiting = new _Waiting(settings.limitConnections > 0 && settings.limitConnections <= _waitQueue.length + connections.length);
       //running out [limitConnections]
       _waitQueue.add(waiting);
       try {
         _processWaitQueue();
-        pconn = await waiting.c.future
-            .timeout(timeout, onTimeout: () => throw timeoutException());
+        pconn = await waiting.c.future.timeout(timeout, onTimeout: () => throw timeoutException());
       } finally {
         _waitQueue.remove(waiting);
       }
@@ -449,9 +414,7 @@ class PoolImpl implements Pool {
 
     pconn._state = testing;
 
-    if (await _testConnection(
-        pconn, timeout - stopwatch.elapsed, () => throw timeoutException()))
-      return pconn;
+    if (await _testConnection(pconn, timeout - stopwatch.elapsed, () => throw timeoutException())) return pconn;
 
     if (timeout > stopwatch.elapsed) {
       throw timeoutException();
@@ -466,8 +429,7 @@ class PoolImpl implements Pool {
   /// Starts from the same direction, so it is more likely to reduce the pool
   /// (i.e., [idleTimeout] likely expired)
   PooledConnectionImpl? _getNextAvailable() {
-    for (final pconn in _connections)
-      if (pconn._state == available) return pconn;
+    for (final pconn in _connections) if (pconn._state == available) return pconn;
     return null;
   }
 
@@ -501,8 +463,7 @@ class PoolImpl implements Pool {
 
   Future _establishForWaitQueue(int count) async {
     assert(count > 0);
-    assert(
-        _establishing); //avoid dead loop (since [_processWaitQueue] might be called)
+    assert(_establishing); //avoid dead loop (since [_processWaitQueue] might be called)
 
     final ops = <Future>[];
     while (--count >= 0) ops.add(_establishConnectionSafely());
@@ -517,11 +478,8 @@ class PoolImpl implements Pool {
         //unable to connect DB server
         _processWaitQueue(); //dispatch succeeded conns first, if any
 
-        final ex = new pg.PostgresqlException(
-            'Failed to establish connection', null,
-            exception: peConnectionFailed);
-        while (_waitQueue.isNotEmpty)
-          _waitQueue.removeAt(0).c.completeError(ex);
+        final ex = new pg.PostgresqlException('Failed to establish connection', null, exception: peConnectionFailed);
+        while (_waitQueue.isNotEmpty) _waitQueue.removeAt(0).c.completeError(ex);
         break; //done
       }
   }
@@ -566,26 +524,18 @@ class PoolImpl implements Pool {
   Timer? _tmProcessAgain;
 
   /// Perfom a query to check the state of the connection.
-  Future<bool> _testConnection(
-      PooledConnectionImpl pconn, Duration timeout, Function onTimeout) async {
+  Future<bool> _testConnection(PooledConnectionImpl pconn, Duration timeout, Function onTimeout) async {
     bool ok;
     try {
-      var row =
-          await pconn._connection!.query('select true').single.timeout(timeout);
+      var row = await pconn._connection!.query('select true').single.timeout(timeout);
       ok = row[0];
     } catch (ex) {
       //TODO Do I really want to log warnings when the connection timeout fails.
       ok = false;
       // Don't log connection test failures during shutdown.
       if (state != stopping && state != stopped) {
-        var msg = ex is TimeoutException
-            ? 'Connection test timed out.'
-            : 'Connection test failed.';
-        _messages.add(new pg.ClientMessage(
-            severity: 'WARNING',
-            connectionName: pconn.name,
-            message: msg,
-            exception: ex));
+        var msg = ex is TimeoutException ? 'Connection test timed out.' : 'Connection test failed.';
+        _messages.add(new pg.ClientMessage(severity: 'WARNING', connectionName: pconn.name, message: msg, exception: ex));
       }
     }
     return ok;
@@ -623,8 +573,7 @@ class PoolImpl implements Pool {
       // If connection older than lifetime setting then destroy.
       // A random number of seconds 0-20 is added, so that all connections don't
       // expire at exactly the same moment.
-    } else if (_isExpired(
-        pconn._established!, settings.maxLifetime + pconn._extraLifetime)) {
+    } else if (_isExpired(pconn._established!, settings.maxLifetime + pconn._extraLifetime)) {
       _destroyConnection(pconn);
       _establishConnectionSafely().then(_processWaitQueue);
     } else {
@@ -634,8 +583,7 @@ class PoolImpl implements Pool {
     }
   }
 
-  bool _isExpired(DateTime time, Duration timeout) =>
-      new DateTime.now().difference(time) > timeout;
+  bool _isExpired(DateTime time, Duration timeout) => new DateTime.now().difference(time) > timeout;
 
   void _destroyConnection(PooledConnectionImpl pconn, [int? i]) {
     pconn._connection?.close();
@@ -667,8 +615,7 @@ class PoolImpl implements Pool {
     _heartbeatTimer?.cancel();
 
     // Send error messages to connections in wait queue.
-    final ex = new pg.PostgresqlException('Connection pool is stopping.', null,
-        exception: pePoolStopped);
+    final ex = new pg.PostgresqlException('Connection pool is stopping.', null, exception: pePoolStopped);
     while (_waitQueue.isNotEmpty) _waitQueue.removeAt(0).c.completeError(ex);
 
     // Close connections as they are returned to the pool.
@@ -695,8 +642,7 @@ class PoolImpl implements Pool {
   }
 
   void _forEachConnection(f(PooledConnectionImpl pconn, int i)) {
-    for (int i = _connections.length;
-        --i >= 0;) //reverse since it might be removed
+    for (int i = _connections.length; --i >= 0;) //reverse since it might be removed
       f(_connections[i], i);
   }
 }

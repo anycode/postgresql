@@ -1,6 +1,7 @@
 library postgresql.pool;
 
 import 'dart:async';
+
 import 'package:postgresql2/postgresql.dart' as pg;
 import 'package:postgresql2/src/pool_impl.dart';
 import 'package:postgresql2/src/pool_settings_impl.dart';
@@ -14,6 +15,8 @@ abstract class Pool {
           int? maxConnections,
           int? limitConnections,
           void Function(int count)? onMaxConnection,
+          void Function(String sql, dynamic values)? onExecute,
+          void Function(String sql, dynamic values)? onQuery,
           Duration? startTimeout,
           Duration? stopTimeout,
           Duration? establishTimeout,
@@ -35,6 +38,8 @@ abstract class Pool {
               maxConnections: maxConnections,
               limitConnections: limitConnections,
               onMaxConnection: onMaxConnection,
+              onExecute: onExecute,
+              onQuery: onQuery,
               startTimeout: startTimeout,
               stopTimeout: stopTimeout,
               establishTimeout: establishTimeout,
@@ -49,9 +54,7 @@ abstract class Pool {
               timeZone: timeZone),
           typeConverter);
 
-  factory Pool.fromSettings(PoolSettings settings,
-          {pg.TypeConverter? typeConverter}) =>
-      new PoolImpl(settings, typeConverter);
+  factory Pool.fromSettings(PoolSettings settings, {pg.TypeConverter? typeConverter}) => new PoolImpl(settings, typeConverter);
 
   Future start();
   Future stop();
@@ -81,6 +84,8 @@ abstract class PoolSettings {
       int maxConnections,
       int limitConnections,
       void Function(int count)? onMaxConnection,
+      void Function(String sql, dynamic values)? onExecute,
+      void Function(String sql, dynamic values)? onQuery,
       Duration startTimeout,
       Duration stopTimeout,
       Duration establishTimeout,
@@ -132,6 +137,17 @@ abstract class PoolSettings {
   /// Callback when detecting the number of DB connections is larger
   /// then the previous maximal number.
   void Function(int count)? get onMaxConnection;
+
+  /// Callback when [Connection.execute] is called.
+  /// It is useful for detecting unexpected pattern.
+  /// For example, `update A set f=null where k=k` is usually an error
+  /// that `@k` shall be used instead. And, it can cause a disaster.
+  void Function(String sql, dynamic values)? get onExecute;
+
+  /// Callback when [Connection.query] is called.
+  /// It is useful for detecting unexpected pattern, such as a SQL pattern
+  /// that can perform badly.
+  void Function(String sql, dynamic values)? get onQuery;
 
   /// If the pool cannot start within this time then return an
   /// error. Defaults to 30 seconds.
@@ -258,16 +274,10 @@ class PooledConnectionState {
   @override
   String toString() => name;
 
-  static const PooledConnectionState connecting =
-      const PooledConnectionState('connecting');
-  static const PooledConnectionState available =
-      const PooledConnectionState('available');
-  static const PooledConnectionState reserved =
-      const PooledConnectionState('reserved');
-  static const PooledConnectionState testing =
-      const PooledConnectionState('testing');
-  static const PooledConnectionState inUse =
-      const PooledConnectionState('inUse');
-  static const PooledConnectionState closed =
-      const PooledConnectionState('closed');
+  static const PooledConnectionState connecting = const PooledConnectionState('connecting');
+  static const PooledConnectionState available = const PooledConnectionState('available');
+  static const PooledConnectionState reserved = const PooledConnectionState('reserved');
+  static const PooledConnectionState testing = const PooledConnectionState('testing');
+  static const PooledConnectionState inUse = const PooledConnectionState('inUse');
+  static const PooledConnectionState closed = const PooledConnectionState('closed');
 }
