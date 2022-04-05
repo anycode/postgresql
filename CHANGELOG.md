@@ -1,3 +1,7 @@
+### Version 1.0.2
+
+* The `onExecute` and `onQuery` callback are added to `Pool` to detect unexpected patterns, such as a missing `@` or low-performance statements.
+
 ### Version 1.0.1
 
 * Fix #20: remove connections from the pool when detecting server restarted/crashed
