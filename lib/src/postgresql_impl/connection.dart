@@ -33,7 +33,7 @@ class ConnectionImpl implements Connection {
   TransactionState _transactionState = unknown;
   @override
   TransactionState get transactionState => _transactionState;
-  
+
   final String _databaseName;
   final String _userName;
   final String _password;
@@ -51,20 +51,21 @@ class ConnectionImpl implements Connection {
   int? _msgType;
   int? _msgLength;
   //int _secretKey;
+  int _transactionLevel = 0;
 
   int? _backendPid;
   final String _debugName;
 
   @override
   int? get backendPid => _backendPid;
-  
+
   String get debugName => _debugName;
 
   @override
   String toString() => '$debugName:$_backendPid';
-    
+
   final _parameters = new Map<String, String>();
-  
+
   Map<String,String>? _parametersView;
 
   @override
@@ -76,7 +77,7 @@ class ConnectionImpl implements Connection {
   Stream<Message> get messages => _messages.stream;
 
   final _messages = new StreamController<Message>.broadcast();
-  
+
   static Future<ConnectionImpl> connect(
       String uri,
       {Duration? connectionTimeout,
@@ -85,10 +86,10 @@ class ConnectionImpl implements Connection {
        TypeConverter? typeConverter,
        String? debugName,
        Future<Socket> mockSocketConnect(String host, int port)?}) async {
-        
+
     var settings = new Settings.fromUri(uri);
 
-    //FIXME Currently this timeout doesn't cancel the socket connection 
+    //FIXME Currently this timeout doesn't cancel the socket connection
     // process.
     // There is a bug open about adding a real socket connect timeout
     // parameter to Socket.connect() if this happens then start using it.
@@ -99,25 +100,25 @@ class ConnectionImpl implements Connection {
     var onTimeout = () => throw new PostgresqlException(
         'Postgresql connection timed out. Timeout: $connectionTimeout.',
         debugName ?? 'pg', exception: peConnectionTimeout);
-    
+
     var connectFunc = mockSocketConnect == null
         ? Socket.connect
         : mockSocketConnect;
-    
+
     Future<Socket> future = connectFunc(settings.host, settings.port)
         .timeout(connectionTimeout, onTimeout: onTimeout);
-    
+
     if (settings.requireSsl) future = _connectSsl(future);
 
     final socket = await future.timeout(connectionTimeout, onTimeout: onTimeout);
-      
+
     var conn = new ConnectionImpl._private(socket, settings,
         applicationName, timeZone, typeConverter, debugName);
-    
+
     socket.listen(conn._readData,
         onError: conn._handleSocketError,
         onDone: conn._handleSocketClosed);
-    
+
     conn
       .._state = socketConnected
       .._sendStartupMessage();
@@ -435,7 +436,7 @@ class ConnectionImpl implements Connection {
 
     var ex = new PostgresqlException(msg.message, debugName,
         serverMessage: msg, exception: msg.code);
-    
+
     if (msgType == _MSG_ERROR_RESPONSE) {
       if (!_hasConnected) {
           _state = closed;
@@ -454,7 +455,7 @@ class ConnectionImpl implements Connection {
           if (ow != null) ow.destroy();
           else {
             _state = closed;
-            _socket.destroy(); 
+            _socket.destroy();
           }
         }
       }
@@ -473,22 +474,22 @@ class ConnectionImpl implements Connection {
     assert(_buffer.bytesAvailable >= length);
     var name = _buffer.readUtf8String(10000);
     var value = _buffer.readUtf8String(10000);
-    
+
     warn(msg) {
       _messages.add(new ClientMessageImpl(
         severity: 'WARNING',
         message: msg,
         connectionName: debugName));
     }
-    
+
     _parameters[name] = value;
-    
+
     // Cache this value so that it doesn't need to be looked up from the map.
     //if (name == 'TimeZone') _isUtcTimeZone = value == 'UTC';
-    
+
     if (name == 'client_encoding' && value != 'UTF8') {
-      warn('client_encoding parameter must remain as UTF8 for correct string ' 
-           'handling. client_encoding is: "$value".');     
+      warn('client_encoding parameter must remain as UTF8 for correct string '
+           'handling. client_encoding is: "$value".');
     }
   }
 
@@ -516,21 +517,37 @@ class ConnectionImpl implements Connection {
 
   @override
   Future<T> runInTransaction<T>(Future<T> operation(), [Isolation isolation = Isolation.readCommitted]) async {
-
-    var begin = 'begin';
-    if (isolation == Isolation.repeatableRead)
-      begin = 'begin; set transaction isolation level repeatable read;';
-    else if (isolation == Isolation.serializable)
-      begin = 'begin; set transaction isolation level serializable;';
-
+    String begin;
+    String commit;
+    String rollback;
+    if (_transactionLevel > 0) {
+      final name = 'sp$_transactionLevel';
+      begin = 'savepoint $name';
+      commit = 'release savepoint $name';
+      rollback = 'rollback to savepoint $name';
+    } else {
+      if (isolation == Isolation.repeatableRead) {
+        begin = 'begin; set transaction isolation level repeatable read;';
+      } else if (isolation == Isolation.serializable) {
+        begin = 'begin; set transaction isolation level serializable;';
+      } else {
+        begin = 'begin';
+      }
+      commit = 'commit';
+      rollback = 'rollback';
+    }
     try {
+      ++_transactionLevel;
       await execute(begin);
       final result = await operation();
-      await execute('commit');
+      await execute(commit);
       return result;
     } catch (_) {
-      await execute('rollback');
+      await execute(rollback);
       rethrow;
+    } finally {
+      assert(_transactionLevel > 0);
+      --_transactionLevel;
     }
   }
 
@@ -593,7 +610,7 @@ class ConnectionImpl implements Connection {
 
     int count = _buffer.readInt16();
     var list = <_Column>[];
-    
+
     for (int i = 0; i < count; i++) {
       var name = _buffer.readUtf8String(length); //TODO better maxSize.
       int fieldId = _buffer.readInt32();
@@ -642,7 +659,7 @@ class ConnectionImpl implements Connection {
           'Binary result set parsing is not implemented.', debugName);
 
       var str = _buffer.readUtf8StringN(colSize),
-        value = _typeConverter.decode(str, col.fieldType, 
+        value = _typeConverter.decode(str, col.fieldType,
             connectionName: _debugName);
 
       rowData[index] = value;
@@ -667,7 +684,7 @@ class ConnectionImpl implements Connection {
 
   @override
   void close() {
-    
+
     if (_state == closed)
       return;
 
@@ -685,7 +702,7 @@ class ConnectionImpl implements Connection {
         _query = null;
       }
     }
-    
+
     try {
       var msg = new MessageBuffer();
       msg.addByte(_MSG_TERMINATE);
