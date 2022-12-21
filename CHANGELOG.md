@@ -1,3 +1,7 @@
+### Version 1.0.4
+
+* `Pool.typeConverter` added.
+
 ### Version 1.0.3
 
 * `runInTransaction` supports nested transactions.

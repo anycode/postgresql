@@ -162,17 +162,17 @@ class PooledConnectionImpl implements PooledConnection, pgi.ConnectionOwner {
 }
 
 class PoolImpl implements Pool {
-
-  PoolImpl(PoolSettings this.settings,
-        this._typeConverter,
-       [this._connectionFactory = pgi.ConnectionImpl.connect]);
+  PoolImpl(PoolSettings this.settings, pg.TypeConverter? typeConverter,
+       [this._connectionFactory = pgi.ConnectionImpl.connect])
+    : this.typeConverter = typeConverter ?? pg.TypeConverter();
       
   PoolState _state = initial;
   @override
   PoolState get state => _state;
 
   final PoolSettings settings;
-  final pg.TypeConverter? _typeConverter;
+  @override
+  final pg.TypeConverter typeConverter;
   final ConnectionFactory _connectionFactory;
   
   final _waitQueue = <_Waiting>[];
@@ -282,7 +282,7 @@ class PoolImpl implements Pool {
         connectionTimeout: settings.establishTimeout,
         applicationName: settings.applicationName,
         timeZone: settings.timeZone,
-        typeConverter: _typeConverter,
+        typeConverter: typeConverter,
         debugName: pconn.name);
       if (conn is pgi.ConnectionImpl) conn.owner = pconn;
 
@@ -695,7 +695,7 @@ class PoolImpl implements Pool {
           _destroyConnection(pconn, i);
       });
 
-      await new Future.delayed(new Duration(milliseconds: 100), () => null);
+      await Future.delayed(const Duration(milliseconds: 100), () => null);
 
       if (stopwatch.elapsed > settings.stopTimeout ) {
         _messages.add(new pg.ClientMessage(

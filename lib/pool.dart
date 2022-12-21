@@ -30,8 +30,7 @@ abstract class Pool {
     String? applicationName,
     String? timeZone,
     pg.TypeConverter? typeConverter})
-      
-      => new PoolImpl(new PoolSettingsImpl.withDefaults(
+      => PoolImpl(PoolSettingsImpl.withDefaults(
               databaseUri: databaseUri,
               poolName: poolName,
               minConnections: minConnections,
@@ -55,7 +54,7 @@ abstract class Pool {
             typeConverter);
   
   factory Pool.fromSettings(PoolSettings settings, {pg.TypeConverter? typeConverter})
-    => new PoolImpl(settings, typeConverter);
+    => PoolImpl(settings, typeConverter);
   
   Future start();
   Future stop();
@@ -71,6 +70,8 @@ abstract class Pool {
   /// The maximal number of concurrent connections that are ever made
   /// since started.
   int get maxConnectionCount;
+  /// The type converter for encoding and decoding values between Dart and database.
+  pg.TypeConverter get typeConverter;
 }
 
 

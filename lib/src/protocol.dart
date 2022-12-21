@@ -3,6 +3,7 @@ library postgresql.protocol;
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data' show BytesBuilder;
 
 // http://www.postgresql.org/docs/9.2/static/protocol-message-formats.html
 
@@ -445,7 +446,7 @@ class _MessageBuilder {
   
   //TODO experiment with disabling copy for performance.
   //Probably better just to do for large performance sensitive message types.
-  final BytesBuilder _builder = new BytesBuilder(copy: true);
+  final _builder = new BytesBuilder(copy: true);
   
   void addByte(int byte) {
     assert(byte >= 0 && byte < 256);

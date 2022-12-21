@@ -20,9 +20,7 @@ class ConnectionImpl implements Connection {
     : _userName = settings.user,
       _password = settings.password,
       _databaseName = settings.database,
-      _typeConverter = typeConverter == null
-          ? new TypeConverter()
-          : typeConverter,
+      _typeConverter = typeConverter ?? TypeConverter(),
       _debugName = debugName ?? 'pg',
       _buffer = new Buffer((msg) => new PostgresqlException(msg, debugName));
 
@@ -94,8 +92,7 @@ class ConnectionImpl implements Connection {
     // There is a bug open about adding a real socket connect timeout
     // parameter to Socket.connect() if this happens then start using it.
     // http://code.google.com/p/dart/issues/detail?id=19120
-    if (connectionTimeout == null)
-      connectionTimeout = new Duration(seconds: 180);
+    connectionTimeout ??= const Duration(seconds: 180);
 
     var onTimeout = () => throw new PostgresqlException(
         'Postgresql connection timed out. Timeout: $connectionTimeout.',
