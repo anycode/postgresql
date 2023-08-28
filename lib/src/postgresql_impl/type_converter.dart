@@ -146,7 +146,7 @@ class DefaultTypeConverter implements TypeConverter {
     return buf.toString();
   }
 
-  String encodeDateTime(DateTime? datetime, {bool isDateOnly: false}) {
+  String encodeDateTime(DateTime? datetime, {bool isDateOnly = false}) {
       if (datetime == null)
       return 'null';
 

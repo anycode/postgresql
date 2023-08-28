@@ -20,7 +20,7 @@ class SettingsImpl implements Settings {
       this._user,
       this._password,
       this._database,
-      {bool requireSsl: false})
+      {bool requireSsl = false})
     : _requireSsl = requireSsl;
   
   static _error(msg) => new PostgresqlException('Settings: $msg', null);

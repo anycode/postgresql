@@ -4,7 +4,7 @@ part of postgresql.impl;
 class ClientMessageImpl implements ClientMessage {
 
   ClientMessageImpl(
-      {this.isError: false,
+      {this.isError = false,
        required this.severity,
        required this.message,
        this.connectionName,
