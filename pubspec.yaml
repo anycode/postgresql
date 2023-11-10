@@ -11,6 +11,7 @@ environment:
 
 dependencies:
   crypto: ">=2.0.0"
+  sasl_scram: ">=0.1.0"
   convert: ">=1.0.0"
   charcode: ">=1.0.0"
   rikulo_commons: ">=5.0.1"

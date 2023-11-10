@@ -16,6 +16,10 @@ const int _S = 83;
 const int _PROTOCOL_VERSION = 196608;
 
 const int _AUTH_TYPE_MD5 = 5;
+const int _AUTH_TYPE_SASL = 10;
+const int _AUTH_TYPE_SASL_CONTINUE = 11;
+const int _AUTH_TYPE_SASL_FINAL = 12;
+
 const int _AUTH_TYPE_OK = 0;
 
 // Messages sent by client (Frontend).
