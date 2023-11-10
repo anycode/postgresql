@@ -22,7 +22,11 @@ class ConnectionImpl implements Connection {
       _databaseName = settings.database,
       _typeConverter = typeConverter ?? TypeConverter(),
       _debugName = debugName ?? 'pg',
-      _buffer = new Buffer((msg) => new PostgresqlException(msg, debugName));
+      _buffer = Buffer((msg) => PostgresqlException(msg, debugName)),
+      _saslAuthenticator = _SaslAuthenticator(ScramAuthenticator(
+        'SCRAM-SHA-256', // Optionally choose hash method from a list provided by the server
+        sha256,
+        UsernamePasswordCredential(username: settings.user, password: settings.password)));
 
   @override
   ConnectionState get state => _state;
@@ -214,25 +218,40 @@ class ConnectionImpl implements Connection {
     }
 
     // Only MD5 authentication is supported.
-    if (authType != _AUTH_TYPE_MD5) {
-      throw new PostgresqlException('Unsupported or unknown authentication '
-          'type: ${_authTypeAsString(authType)}, only MD5 authentication is '
+    if (!const {_AUTH_TYPE_MD5, _AUTH_TYPE_SASL, 
+        _AUTH_TYPE_SASL_CONTINUE, _AUTH_TYPE_SASL_FINAL}.contains(authType)) {
+      throw PostgresqlException('Unsupported or unknown authentication '
+          'type: ${_authTypeAsString(authType)}, only MD5 and scram-sha-256 authentication is '
           'supported.', _debugName,
           exception: peConnectionFailed);
     }
+    switch(authType) {
+    case _AUTH_TYPE_MD5:
+      var bytes = _buffer.readBytes(4);
+      var salt = String.fromCharCodes(bytes);
+      var md5 = 'md5' + _md5s(_md5s(_password + _userName) + salt);
+      // Build message.
+      var msg = MessageBuffer();
+      msg.addByte(_MSG_PASSWORD);
+      msg.addInt32(0);
+      msg.addUtf8String(md5);
+      msg.setLength();
 
-    var bytes = _buffer.readBytes(4);
-    var salt = new String.fromCharCodes(bytes);
-    var md5 = 'md5' + _md5s(_md5s(_password + _userName) + salt);
-
-    // Build message.
-    var msg = new MessageBuffer();
-    msg.addByte(_MSG_PASSWORD);
-    msg.addInt32(0);
-    msg.addUtf8String(md5);
-    msg.setLength();
-
-    _socket.add(msg.buffer);
+      _socket.add(msg.buffer);
+      break;
+    case _AUTH_TYPE_SASL:
+      _saslAuthenticator.sasl(_socket, _buffer, 
+        Uint8List.fromList(_buffer.readBytes(length - 4)));
+      break;
+    case _AUTH_TYPE_SASL_CONTINUE:
+      _saslAuthenticator.saslContinue(_socket, _buffer, 
+        Uint8List.fromList(_buffer.readBytes(length - 4)));
+      break;
+    case _AUTH_TYPE_SASL_FINAL:
+      _saslAuthenticator.saslFinal(_socket, _buffer, 
+        Uint8List.fromList(_buffer.readBytes(length - 4)));
+      break;
+    }
   }
 
   void _readReadyForQuery(int msgType, int length) {
@@ -724,5 +743,66 @@ class ConnectionImpl implements Connection {
     _state = closed;
     _socket.destroy();
     Timer.run(_messages.close);
+  }
+}
+
+
+class _SaslAuthenticator {
+  final SaslAuthenticator authenticator;
+
+  _SaslAuthenticator(this.authenticator);
+
+  void sasl(Socket socket, Buffer buffer, Uint8List bytesReceivedFromServer) {
+    final bytesToSendToServer = authenticator.handleMessage(
+      SaslMessageType.AuthenticationSASL,
+      bytesReceivedFromServer);
+
+     if (bytesToSendToServer == null) {
+      throw PostgresqlException('KindSASL: No bytes to send', null,
+          exception: peConnectionFailed); 
+    }
+
+    final mechanismName = authenticator.mechanism.name;
+    final encodedMechanismName = utf8.encode(mechanismName);
+    final length = bytesToSendToServer.length;
+    // No Identifier bit + 4 byte counts (for whole length) + mechanism bytes + zero byte + 4 byte counts (for msg length) + msg bytes
+    final totalLength = 4 + encodedMechanismName.length + 1 + 4 + length;
+
+    final msg = MessageBuffer();
+    msg.addByte(_MSG_PASSWORD);
+    msg.addInt32(totalLength);
+    msg.addUtf8String(mechanismName);
+    msg.addInt32(length);
+    msg.buffer.addAll(bytesToSendToServer);
+
+    msg.setLength();
+    socket.add(msg.buffer);
+  }
+
+  void saslContinue(Socket socket, Buffer buffer, Uint8List bytesReceivedFromServer) {
+    final bytesToSendToServer = authenticator.handleMessage(
+      SaslMessageType.AuthenticationSASLContinue,
+      bytesReceivedFromServer);
+
+    if (bytesToSendToServer == null) {
+      throw PostgresqlException('KindSASLContinue: No bytes to send', null,
+          exception: peConnectionFailed); 
+    }
+
+    final length = 4 + bytesToSendToServer.length;
+    final msg = MessageBuffer();
+    msg.addByte(_MSG_PASSWORD);
+    msg.addInt32(length);
+    msg.buffer.addAll(bytesToSendToServer);
+
+    msg.setLength();
+    socket.add(msg.buffer);
+  }
+
+
+  void saslFinal(Socket socket, Buffer buffer, Uint8List bytesReceivedFromServer) {
+    authenticator.handleMessage(
+      SaslMessageType.AuthenticationSASLFinal,
+      bytesReceivedFromServer);
   }
 }
