@@ -1,3 +1,11 @@
+### Version 1.0.4
+
+* `Pool.typeConverter` added.
+
+### Version 1.0.3
+
+* `runInTransaction` supports nested transactions.
+
 ### Version 1.0.2
 
 * The `onExecute` and `onQuery` callback are added to `Pool` to detect unexpected patterns, such as a missing `@` or low-performance statements.
