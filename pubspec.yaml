@@ -6,6 +6,7 @@ description: >
   Also optimizing the pool implementation aggressivly.
   With added support for encoding parametrized lists. See README.md
 homepage: https://github.com/tomyeh/postgresql
+publish_to: https://pub.anycode.dev
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
