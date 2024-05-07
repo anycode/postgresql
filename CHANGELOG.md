@@ -1,3 +1,9 @@
+### Version 1.5.1
+
+* bug fixes
+* extended support for arrays (see README.md)
+* extended support for '-infinity' and 'infinity' dates
+
 ### Version 1.0.4
 
 * `Pool.typeConverter` added.

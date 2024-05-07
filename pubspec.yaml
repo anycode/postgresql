@@ -3,18 +3,18 @@ version: 1.5.1
 description: >
   A fork of Greg's PostgreSQL driver (xxgreg/postgresql)
   using conserved substitution respecting strings and @@ operators.
-  Also optimizing the pool implementation aggressivly.
+  Also optimizing the pool implementation aggressively.
 homepage: https://github.com/tomyeh/postgresql
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  crypto: ">=2.0.0"
-  sasl_scram: ">=0.1.0"
-  convert: ">=1.0.0"
-  charcode: ">=1.0.0"
-  rikulo_commons: ">=5.0.1"
+  crypto: ^3.0.3
+  sasl_scram: ^0.1.1
+  convert: ^3.1.1
+  charcode: ^1.3.1
+  rikulo_commons: ^6.0.1+1
 
 dev_dependencies:
   test: any
