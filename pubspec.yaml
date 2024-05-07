@@ -1,10 +1,11 @@
 name: postgresql2
-version: 1.5.1
+version: 1.5.1+ac
 description: >
   A fork of Greg's PostgreSQL driver (xxgreg/postgresql)
   using conserved substitution respecting strings and @@ operators.
   Also optimizing the pool implementation aggressively.
 homepage: https://github.com/tomyeh/postgresql
+publish_to: https://pub.anycode.dev
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
