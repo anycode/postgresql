@@ -136,14 +136,25 @@ class DefaultTypeConverter implements TypeConverter {
   }
   
   String encodeArray(Iterable value, {String? pgType}) {
-    final buf = new StringBuffer('array[');
-    for (final v in value) {
-      if (buf.length > 6) buf.write(',');
-      buf.write(encodeValueDefault(v));
+    if(pgType == null) {
+      // no pgType is specified, return simple comma separated list
+      // of values and let developer wrap the value in proper format
+      // e.g.
+      // 'where id = any(array[@val]::int[])' will produce 'where id = any(array[v1,v2,...]::int[])' which is OK
+      // 'where id in (@arr)' will produce 'where id in (v1,v2,...)' which is OK
+      return value.map((value) => encodeValueDefault(value)).join(',');
+    } else {
+      // pgType is specified, return pg array of the given type.
+      // This can be only used as array. It cannot be used as a pg list.
+      // e.g. 'where id = any(@val:int_array)' will produce 'where id = any(array[v1,v2,...]::int[])' which is OK
+      // 'where id in (@val:int_array)' will produce 'where id in (array[v1,v2,...]::int[])' which will FAIL
+      final buf = new StringBuffer('array[')
+        ..write(value.map((value) => encodeValueDefault(value)).join(','))
+        ..write(']::')
+        ..write(pgType)
+        ..write('[]');
+      return buf.toString();
     }
-    buf.write(']');
-    if (pgType != null) buf..write('::')..write(pgType)..write('[]');
-    return buf.toString();
   }
 
   String encodeDateTime(DateTime? datetime, {bool isDateOnly = false}) {
