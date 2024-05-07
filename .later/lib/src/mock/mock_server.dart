@@ -27,10 +27,10 @@ class MockServerBackendImpl implements Backend {
     };
   }
 
-  final Mocket mocket = new Mocket();
+  final mocket = Mocket();
 
-  final List<Packet> log = new List<Packet>();
-  final List<Uint8List> received = new List<Uint8List>();
+  final log = <Packet>[];
+  final received = <Uint8List>[];
 
   bool _isClosed = true;
   bool _isDestroyed = true;
