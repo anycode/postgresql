@@ -39,6 +39,7 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
 
   var _isReleased = false,
     _nAccess = 0;
+  final _startAt = DateTime.now();
   final pg.Connection _conn;
   final PoolImpl _pool;
   final PooledConnectionImpl _pconn;
@@ -64,14 +65,14 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
   @override
   Stream<pg.Row> query(String sql, [values]) {
     if (_isReleased) throw _error('query');
-    _pool.settings.onQuery?.call(++_nAccess, sql, values);
+    _pool.settings.onQuery?.call(sql, values, ++_nAccess, _startAt);
     return _conn.query(sql, values);
   }
 
   @override
   Future<int> execute(String sql, [values]) {
     if (_isReleased) throw _error('execute');
-    _pool.settings.onExecute?.call(++_nAccess, sql, values);
+    _pool.settings.onExecute?.call(sql, values, ++_nAccess, _startAt);
     return _conn.execute(sql, values);
   }
 

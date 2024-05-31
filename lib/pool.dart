@@ -15,8 +15,8 @@ abstract class Pool {
     int? maxConnections,
     int? limitConnections,
     void Function(int count)? onMaxConnection,
-    void Function(int count, String sql, dynamic values)? onExecute,
-    void Function(int count, String sql, dynamic values)? onQuery,
+    void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute,
+    void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery,
     Duration? startTimeout,
     Duration? stopTimeout,
     Duration? establishTimeout,
@@ -85,8 +85,8 @@ abstract class PoolSettings {
       int maxConnections,
       int limitConnections,
       void Function(int count)? onMaxConnection,
-      void Function(int count, String sql, dynamic values)? onExecute,
-      void Function(int count, String sql, dynamic values)? onQuery,
+      void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute,
+      void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery,
       Duration startTimeout,
       Duration stopTimeout,
       Duration establishTimeout,
@@ -147,7 +147,8 @@ abstract class PoolSettings {
   /// - [count] the total number of accesses, including [query]
   /// and [execute], of this connection. It is useful to detect if
   /// any abnormal number of access.
-  void Function(int count, String sql, dynamic values)? get onExecute;
+  /// - [startAt] when the connection was established
+  void Function(String sql, dynamic values, int count, DateTime startAt)? get onExecute;
 
   /// Callback when [Connection.query] is called.
   /// It is useful for detecting unexpected pattern, such as a SQL pattern
@@ -156,7 +157,8 @@ abstract class PoolSettings {
   /// - [count] the total number of accesses, including [query]
   /// and [execute], of this connection. It is useful to detect if
   /// any abnormal number of access.
-  void Function(int count, String sql, dynamic values)? get onQuery;
+  /// - [startAt] when the connection was established
+  void Function(String sql, dynamic values, int count, DateTime startAt)? get onQuery;
 
   /// If the pool cannot start within this time then return an
   /// error. Defaults to 30 seconds.
