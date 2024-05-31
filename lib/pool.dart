@@ -15,8 +15,8 @@ abstract class Pool {
     int? maxConnections,
     int? limitConnections,
     void Function(int count)? onMaxConnection,
-    void Function(String sql, dynamic values)? onExecute,
-    void Function(String sql, dynamic values)? onQuery,
+    void Function(int count, String sql, dynamic values)? onExecute,
+    void Function(int count, String sql, dynamic values)? onQuery,
     Duration? startTimeout,
     Duration? stopTimeout,
     Duration? establishTimeout,
@@ -85,8 +85,8 @@ abstract class PoolSettings {
       int maxConnections,
       int limitConnections,
       void Function(int count)? onMaxConnection,
-      void Function(String sql, dynamic values)? onExecute,
-      void Function(String sql, dynamic values)? onQuery,
+      void Function(int count, String sql, dynamic values)? onExecute,
+      void Function(int count, String sql, dynamic values)? onQuery,
       Duration startTimeout,
       Duration stopTimeout,
       Duration establishTimeout,
@@ -143,12 +143,20 @@ abstract class PoolSettings {
   /// It is useful for detecting unexpected pattern.
   /// For example, `update A set f=null where k=k` is usually an error
   /// that `@k` shall be used instead. And, it can cause a disaster.
-  void Function(String sql, dynamic values)? get onExecute;
+  ///
+  /// - [count] the total number of accesses, including [query]
+  /// and [execute], of this connection. It is useful to detect if
+  /// any abnormal number of access.
+  void Function(int count, String sql, dynamic values)? get onExecute;
 
   /// Callback when [Connection.query] is called.
   /// It is useful for detecting unexpected pattern, such as a SQL pattern
   /// that can perform badly.
-  void Function(String sql, dynamic values)? get onQuery;
+  ///
+  /// - [count] the total number of accesses, including [query]
+  /// and [execute], of this connection. It is useful to detect if
+  /// any abnormal number of access.
+  void Function(int count, String sql, dynamic values)? get onQuery;
 
   /// If the pool cannot start within this time then return an
   /// error. Defaults to 30 seconds.

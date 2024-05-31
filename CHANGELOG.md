@@ -1,3 +1,7 @@
+### Version 1.6.0
+
+* The `count` parameter added to `onQuery` and `onExecute` to indicate the total number of accesses in the given transaction. Useful for detecting abnormal access, such as a dead loop.
+
 ### Version 1.0.4
 
 * `Pool.typeConverter` added.
