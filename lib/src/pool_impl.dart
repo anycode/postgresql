@@ -32,14 +32,14 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
   ConnectionDecorator(this._pool, PooledConnectionImpl pconn, pg.Connection conn)
       : _pconn = pconn, _conn = conn {
     if (conn is pgi.ConnectionImpl) conn.owner = this;
+    _stats = _pool.settings.onOpen?.call(this);
   }
 
   _error(fnName) => pg.PostgresqlException(
       '$fnName() called on closed connection.', _pconn.name);
 
-  var _isReleased = false,
-    _nAccess = 0;
-  final _startAt = DateTime.now();
+  var _isReleased = false;
+  var _stats;
   final pg.Connection _conn;
   final PoolImpl _pool;
   final PooledConnectionImpl _pconn;
@@ -65,14 +65,14 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
   @override
   Stream<pg.Row> query(String sql, [values]) {
     if (_isReleased) throw _error('query');
-    _pool.settings.onQuery?.call(sql, values, ++_nAccess, _startAt);
+    _pool.settings.onQuery?.call(sql, values, _stats);
     return _conn.query(sql, values);
   }
 
   @override
   Future<int> execute(String sql, [values]) {
     if (_isReleased) throw _error('execute');
-    _pool.settings.onExecute?.call(sql, values, ++_nAccess, _startAt);
+    _pool.settings.onExecute?.call(sql, values, _stats);
     return _conn.execute(sql, values);
   }
 

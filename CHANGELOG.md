@@ -1,6 +1,7 @@
-### Version 1.6.1
+### Version 1.6.2
 
-* The `count` and `startAt` parameters added to `onQuery` and `onExecute` to indicate the total number of accesses in the given transaction. Useful for detecting abnormal access, such as a dead loop.
+* The `stats` parameter added to `onQuery` and `onExecute` to pass application-specific data for monitoring the connections, such as detecting abnormal access, such as a dead loop.
+* The `onOpen` callback added to `PoolSettings` to prepare the `stats` paremeter mentioned above.
 
 ### Version 1.0.4
 
@@ -12,7 +13,7 @@
 
 ### Version 1.0.2
 
-* The `onExecute` and `onQuery` callback are added to `Pool` to detect unexpected patterns, such as a missing `@` or low-performance statements.
+* The `onExecute` and `onQuery` callback are added to `PoolSettings` to detect unexpected patterns, such as a missing `@` or low-performance statements.
 
 ### Version 1.0.1
 

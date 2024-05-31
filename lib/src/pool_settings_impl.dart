@@ -13,9 +13,10 @@ class PoolSettingsImpl implements PoolSettings {
       this.minConnections = 5,
       this.maxConnections = 10,
       this.limitConnections = 0,
+      dynamic Function(pg.Connection connection)? this.onOpen,
       void Function(int count)? this.onMaxConnection,
-      void Function(String sql, dynamic values, int count, DateTime startAt)? this.onExecute,
-      void Function(String sql, dynamic values, int count, DateTime startAt)? this.onQuery,
+      QueryCallback? this.onExecute,
+      QueryCallback? this.onQuery,
       this.startTimeout = const Duration(seconds: 30),
       this.stopTimeout = const Duration(seconds: 30),
       this.establishTimeout = const Duration(seconds: 30),
@@ -38,9 +39,10 @@ class PoolSettingsImpl implements PoolSettings {
         int? minConnections,
         int? maxConnections,
         int? limitConnections,
+        dynamic Function(pg.Connection connection)? onOpen,
         void Function(int count)? onMaxConnection,
-        void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute,
-        void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery,
+        QueryCallback? onExecute,
+        QueryCallback? onQuery,
         Duration? startTimeout,
         Duration? stopTimeout,
         Duration? establishTimeout,
@@ -60,6 +62,7 @@ class PoolSettingsImpl implements PoolSettings {
      minConnections: minConnections ?? _default.minConnections,
      maxConnections: maxConnections ?? _default.maxConnections,
      limitConnections: limitConnections ?? _default.limitConnections,
+     onOpen: onOpen,
      onMaxConnection: onMaxConnection,
      onExecute: onExecute,
      onQuery: onQuery,
@@ -91,11 +94,13 @@ class PoolSettingsImpl implements PoolSettings {
   @override
   final int limitConnections;
   @override
+  final dynamic Function(pg.Connection connection)? onOpen;
+  @override
   final void Function(int count)? onMaxConnection;
   @override
-  final void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute;
+  final QueryCallback? onExecute;
   @override
-  final void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery;
+  final QueryCallback? onQuery;
   @override
   final Duration startTimeout;
   @override

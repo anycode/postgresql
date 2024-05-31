@@ -5,6 +5,12 @@ import 'package:postgresql2/postgresql.dart' as pg;
 import 'package:postgresql2/src/pool_impl.dart';
 import 'package:postgresql2/src/pool_settings_impl.dart';
 
+/// Callback of [PoolSettings.onQuery] and [PoolSettings.onExecute].
+///
+/// - [stats] the return value of [PoolSettings.onOpen], or null if not
+/// registered
+typedef QueryCallback = void Function(String sql, dynamic values, dynamic stats);
+
 /// A connection pool for PostgreSQL database connections.
 abstract class Pool {
   
@@ -14,9 +20,10 @@ abstract class Pool {
     int? minConnections,
     int? maxConnections,
     int? limitConnections,
+    dynamic Function(pg.Connection connection)? onOpen,
     void Function(int count)? onMaxConnection,
-    void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute,
-    void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery,
+    QueryCallback? onExecute,
+    QueryCallback? onQuery,
     Duration? startTimeout,
     Duration? stopTimeout,
     Duration? establishTimeout,
@@ -36,6 +43,7 @@ abstract class Pool {
               minConnections: minConnections,
               maxConnections: maxConnections,
               limitConnections: limitConnections,
+              onOpen: onOpen,
               onMaxConnection: onMaxConnection,
               onExecute: onExecute,
               onQuery: onQuery,
@@ -84,9 +92,10 @@ abstract class PoolSettings {
       int minConnections,
       int maxConnections,
       int limitConnections,
+      dynamic Function(pg.Connection connection)? onOpen,
       void Function(int count)? onMaxConnection,
-      void Function(String sql, dynamic values, int count, DateTime startAt)? onExecute,
-      void Function(String sql, dynamic values, int count, DateTime startAt)? onQuery,
+      QueryCallback? onExecute,
+      QueryCallback? onQuery,
       Duration startTimeout,
       Duration stopTimeout,
       Duration establishTimeout,
@@ -139,26 +148,20 @@ abstract class PoolSettings {
   /// then the previous maximal number.
   void Function(int count)? get onMaxConnection;
 
+  /// Called when the connection is established.
+  /// The return value will be stored and passed to [onQuery] and [onExecute].
+  dynamic Function(pg.Connection connection)? get onOpen;
+
   /// Callback when [Connection.execute] is called.
   /// It is useful for detecting unexpected pattern.
   /// For example, `update A set f=null where k=k` is usually an error
   /// that `@k` shall be used instead. And, it can cause a disaster.
-  ///
-  /// - [count] the total number of accesses, including [query]
-  /// and [execute], of this connection. It is useful to detect if
-  /// any abnormal number of access.
-  /// - [startAt] when the connection was established
-  void Function(String sql, dynamic values, int count, DateTime startAt)? get onExecute;
+  QueryCallback? get onExecute;
 
   /// Callback when [Connection.query] is called.
   /// It is useful for detecting unexpected pattern, such as a SQL pattern
   /// that can perform badly.
-  ///
-  /// - [count] the total number of accesses, including [query]
-  /// and [execute], of this connection. It is useful to detect if
-  /// any abnormal number of access.
-  /// - [startAt] when the connection was established
-  void Function(String sql, dynamic values, int count, DateTime startAt)? get onQuery;
+  QueryCallback? get onQuery;
 
   /// If the pool cannot start within this time then return an
   /// error. Defaults to 30 seconds.
