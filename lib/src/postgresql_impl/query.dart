@@ -88,11 +88,11 @@ class _Row implements Row {
   // Map column name to column index
   final Map<Symbol, int> _index;
   final List<String> _columnNames;
-  final List _columnValues;
+  final List<dynamic> _columnValues;
   final List<Column> _columns;
 
   @override
-  operator[] (int i) => _columnValues[i];
+  dynamic operator[] (int i) => _columnValues[i];
 
   @override
   void forEach(void f(String columnName, columnValue)) {
@@ -103,7 +103,7 @@ class _Row implements Row {
   }
 
   @override
-  noSuchMethod(Invocation invocation) {
+  dynamic noSuchMethod(Invocation invocation) {
     var name = invocation.memberName;
     if (invocation.isGetter) {
       var i = _index[name];

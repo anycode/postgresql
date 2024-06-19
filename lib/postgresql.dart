@@ -143,16 +143,16 @@ abstract class Connection {
 abstract class Row {
   
   /// Get a column value by column index (zero based).
-  operator[] (int i);
-  
+  dynamic operator[] (int i);
+
   /// Iterate through column names and values.
-  void forEach(void f(String columnName, columnValue));
-  
+  void forEach(void f(String columnName, dynamic columnValue));
+
   /// An unmodifiable list of column values.
-  List toList();
-  
-  /// An unmodifiable map of column names and values. 
-  Map toMap();
+  List<dynamic> toList();
+
+  /// An unmodifiable map of column names and values.
+  Map<String, dynamic> toMap();
 
   List<Column> getColumns();
 }
