@@ -3,7 +3,7 @@ part of postgresql.impl;
 class _Query {
   int _state = _QUEUED;
   final String sql;
-  final StreamController<_Row> _controller = new StreamController<_Row>();
+  final StreamController<_Row> _controller = StreamController<_Row>();
   int _commandIndex = 0;
   int? _columnCount;
   List<_Column>? _columns;
@@ -15,24 +15,24 @@ class _Query {
 
   _Query(this.sql);
 
-  Stream<dynamic> get stream => _controller.stream;
+  Stream<Row> get stream => _controller.stream;
 
   void addRowDescription() {
     if (_state == _QUEUED)
       _state = _STREAMING;
 
     final columnNames = _columnNames = _columns!.map((c) => c.name).toList(),
-      columnIndex = _columnIndex = new Map<Symbol, int>();
+      columnIndex = _columnIndex = <Symbol, int>{};
     for (var i = 0; i < columnNames.length; i++) {
       var name = columnNames[i];
       if (_reIdent.hasMatch(name))
-        columnIndex[new Symbol(name)] = i;
+        columnIndex[Symbol(name)] = i;
     }
   }
-  static final _reIdent = new RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
+  static final _reIdent = RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$');
 
   void addRow() {
-    var row = new _Row(_columnNames!, _rowData!, _columnIndex!, _columns!);
+    var row = _Row(_columnNames!, _rowData!, _columnIndex!, _columns!);
     _rowData = null;
     _controller.add(row);
   }
@@ -117,13 +117,13 @@ class _Row implements Row {
   String toString() => _columnValues.toString();
 
   @override
-  List toList() => new UnmodifiableListView(_columnValues);
+  List toList() => UnmodifiableListView(_columnValues);
 
   @override
-  Map<String, dynamic> toMap() => new Map<String, dynamic>.fromIterables(_columnNames, _columnValues);
+  Map<String, dynamic> toMap() => Map<String, dynamic>.fromIterables(_columnNames, _columnValues);
 
   @override
-  List<Column> getColumns() => new UnmodifiableListView<Column>(_columns);
+  List<Column> getColumns() => UnmodifiableListView<Column>(_columns);
 }
 
 

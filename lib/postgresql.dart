@@ -7,7 +7,7 @@ export 'package:postgresql2/src/postgresql_impl/postgresql_impl.dart'
   show encodeString, escapes, escapePattern,
        DefaultTypeConverter;
 export 'package:postgresql2/src/substitute.dart'
-  show substitute;
+  show substitute, substituteByList;
 
 /// Connect to a PostgreSQL database.
 /// 
@@ -60,7 +60,7 @@ abstract class Connection {
   /// If another query is already in progress, then the query will be queued
   /// and executed once the preceding query is complete.
   ///
-  /// The results can be fetched from the [Row]s by column name, or by index.
+  /// The results can be fetched from the [Row]s by column name.
   ///
   /// Generally it is best to call [Stream.toList] on the stream and wait for
   /// all of the rows to be received.
@@ -83,22 +83,30 @@ abstract class Connection {
   ///     conn.query("insert into foo_table values (@a, @b);", {'a': a, 'b': b})
   ///       .then(...);
   ///       
-  ///  Or:
-  ///  
-  ///     conn.query("insert into foo_table values (@0, @1);", [a, b])
-  ///        .then(...);
-  ///        
   ///  If you need to use an '@' character in your query then you will need to
   ///  escape it as '@@'. If no values are provided, then there is no need to
   ///  escape '@' characters.
-  Stream<Row> query(String sql, [values]);
+  Stream<Row> query(String sql, [Map? values]);
 
+  /// Queue a sql query to be run, returning a [Stream] of [Row]s.
+  /// The results can be fetched from the [Row]s by index.
+  /// Identical to [query] apart from the [values] must be a list.
+  /// 
+  /// For example:
+  ///  
+  ///     conn.query("insert into foo_table values (@0, @1);", [a, b])
+  ///        .then(...);
+  Stream<Row> queryByList(String sql, List? values);
 
   /// Queues a command for execution, and when done, returns the number of rows
   /// affected by the sql command. Indentical to [query] apart from the
   /// information returned.
-  Future<int> execute(String sql, [values]);
+  Future<int> execute(String sql, [Map? values]);
 
+  /// Queues a command for execution, and when done, returns the number of rows
+  /// affected by the sql command. Indentical to [queryByList] apart from the
+  /// information returned.
+  Future<int> executeByList(String sql, List? values);
 
   /// Allow multiple queries to be run in a transaction. The user must wait for
   /// runInTransaction() to complete before making any further queries.

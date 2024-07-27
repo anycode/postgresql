@@ -1,3 +1,7 @@
+### Version 1.7.0
+
+* *BREAK CHANGE* The `values` paramter of `Connection.query` and `execute` must be `Map`. For `List` values (by-index), please use `queryByList` and `executeByList` instead.
+
 ### Version 1.6.2
 
 * The `stats` parameter added to `onQuery` and `onExecute` to pass application-specific data for monitoring the connections, such as detecting abnormal access, such as a dead loop.

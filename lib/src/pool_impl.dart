@@ -63,17 +63,29 @@ class ConnectionDecorator implements pg.Connection, pgi.ConnectionOwner {
   }
 
   @override
-  Stream<pg.Row> query(String sql, [values]) {
+  Stream<pg.Row> query(String sql, [Map? values]) {
     if (_isReleased) throw _error('query');
     _pool.settings.onQuery?.call(sql, values, _stats);
     return _conn.query(sql, values);
   }
+  @override
+  Stream<pg.Row> queryByList(String sql, List? values) {
+    if (_isReleased) throw _error('query');
+    _pool.settings.onQuery?.call(sql, values, _stats);
+    return _conn.queryByList(sql, values);
+  }
 
   @override
-  Future<int> execute(String sql, [values]) {
+  Future<int> execute(String sql, [Map? values]) {
     if (_isReleased) throw _error('execute');
     _pool.settings.onExecute?.call(sql, values, _stats);
     return _conn.execute(sql, values);
+  }
+  @override
+  Future<int> executeByList(String sql, List? values) {
+    if (_isReleased) throw _error('execute');
+    _pool.settings.onExecute?.call(sql, values, _stats);
+    return _conn.executeByList(sql, values);
   }
 
   @override
