@@ -1,6 +1,7 @@
 ### Version 1.7.0
 
 * *BREAK CHANGE* The `values` paramter of `Connection.query` and `execute` must be `Map`. For `List` values (by-index), please use `queryByList` and `executeByList` instead.
+* AnyCode updates
 
 ### Version 1.6.2
 

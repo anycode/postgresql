@@ -1,3 +1,9 @@
+## Publish to anycode repo
+
+`unpub_auth get | dart pub token add https://pub.anycode.dev`
+
+`fvm dart pub publish` or `dart pub publish`
+
 # PostgreSQL database driver for Dart
 
 > A fork of [Greg's PostgreSQL driver](https://github.com/xxgreg/postgresql).
