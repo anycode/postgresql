@@ -511,21 +511,43 @@ class ConnectionImpl implements Connection {
   }
 
   @override
-  Stream<Row> query(String sql, [values]) {
+  Stream<Row> query(String sql, [Map? values]) {
     try {
       if (values != null)
         sql = substitute(sql, values, _typeConverter.encode);
-      var query = _enqueueQuery(sql);
-      return query.stream as Stream<Row>;
+
+      return _enqueueQuery(sql).stream;
     } catch (ex, st) {
-      return Stream.fromFuture(Future.error(ex, st));
+      return Stream.error(ex, st);
     }
   }
 
   @override
-  Future<int> execute(String sql, [values]) async {
+  Stream<Row> queryByList(String sql, List? values) {
+    try {
+      if (values != null)
+        sql = substituteByList(sql, values, _typeConverter.encode);
+
+      return _enqueueQuery(sql).stream;
+    } catch (ex, st) {
+      return Stream.error(ex, st);
+    }
+  }
+
+  @override
+  Future<int> execute(String sql, [Map? values]) async {
     if (values != null)
       sql = substitute(sql, values, _typeConverter.encode);
+
+    var query = _enqueueQuery(sql);
+    await query.stream.isEmpty;
+    return query._rowsAffected ?? 0;
+  }
+
+  @override
+  Future<int> executeByList(String sql, List? values) async {
+    if (values != null)
+      sql = substituteByList(sql, values, _typeConverter.encode);
 
     var query = _enqueueQuery(sql);
     await query.stream.isEmpty;
