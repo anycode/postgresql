@@ -38,13 +38,18 @@ class ParseException {
       : '$message At character: $index, in source "$source"';
 }
 
-String substitute(String source, values, String encodeValue(value, String? type)) {
-  _ValueEncoder valueEncoder;
-  if (values is List) valueEncoder = _createListValueEncoder(values, encodeValue);
-  else if (values is Map) valueEncoder = _createMapValueEncoder(values, encodeValue);
-  else if (values == null) valueEncoder = _nullValueEncoder;
-  else throw new ArgumentError('Unexpected type.');
+String substitute(String source, Map? values,
+    String encodeValue(value, String? type))
+=> _substitute(source, values == null ? _nullValueEncoder:
+    _createMapValueEncoder(values, encodeValue), encodeValue);
 
+String substituteByList(String source, List? values,
+    String encodeValue(value, String? type))
+=> _substitute(source, values == null ? _nullValueEncoder:
+    _createListValueEncoder(values, encodeValue), encodeValue);
+
+String _substitute(String source, _ValueEncoder valueEncoder,
+    String encodeValue(value, String? type)) {
   final buf = new StringBuffer(),
     s = new _Scanner(source),
     cache = new HashMap();

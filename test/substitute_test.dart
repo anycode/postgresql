@@ -85,7 +85,7 @@ void main() {
     });
     
     test('Substitute 13', () {
-      var result = substitute('@0 @1', ['foo', 42], tc.encodeValue);
+      var result = substituteByList('@0 @1', ['foo', 42], tc.encodeValue);
       expect(result, equals(" E'foo'  42"));
     });
 
